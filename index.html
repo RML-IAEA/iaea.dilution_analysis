@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IAEA Dilution Analysis</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f4;
+        }
+        .iaea-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="iaea-container p-8 mt-10 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold mb-6 text-center text-blue-800">IAEA Dilution Analysis</h1>
+        
+        <div id="mainMenu">
+            <h2 class="text-xl mb-4">Select Data Source</h2>
+            <div class="space-y-4">
+                <button onclick="showTracerSelection('test')" 
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                    Use Test CS-134 Dilution Mass Data
+                </button>
+                <button onclick="showTracerSelection('custom')" 
+                        class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                    Add Mass Data
+                </button>
+            </div>
+        </div>
+
+        <div id="tracerSelection" class="hidden mt-6">
+            <h2 class="text-xl mb-4">Select Tracer</h2>
+            <select id="tracerDropdown" class="w-full p-2 border rounded">
+                <!-- Tracers will be populated dynamically -->
+            </select>
+            <div class="mt-4">
+                <button onclick="proceedToDataEntry()" 
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                    Proceed
+                </button>
+            </div>
+        </div>
+
+        <div id="dataEntry" class="hidden mt-6">
+            <h2 class="text-xl mb-4">Enter Dilution Measurements</h2>
+            <div class="space-y-4">
+                <input type="number" id="dilutionNumber" placeholder="Dilution Number" 
+                       class="w-full p-2 border rounded">
+                
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block mb-2">M0 Value</label>
+                        <input type="number" step="0.00001" id="m0Value" placeholder="M0 Value" 
+                               class="w-full p-2 border rounded">
+                        <input type="number" step="0.00001" id="m0Uncertainty" placeholder="M0 Uncertainty" 
+                               class="w-full p-2 border rounded mt-2">
+                    </div>
+                    <div>
+                        <label class="block mb-2">M1 Value</label>
+                        <input type="number" step="0.00001" id="m1Value" placeholder="M1 Value" 
+                               class="w-full p-2 border rounded">
+                        <input type="number" step="0.00001" id="m1Uncertainty" placeholder="M1 Uncertainty" 
+                               class="w-full p-2 border rounded mt-2">
+                    </div>
+                    <div>
+                        <label class="block mb-2">M2 Value</label>
+                        <input type="number" step="0.00001" id="m2Value" placeholder="M2 Value" 
+                               class="w-full p-2 border rounded">
+                        <input type="number" step="0.00001" id="m2Uncertainty" placeholder="M2 Uncertainty" 
+                               class="w-full p-2 border rounded mt-2">
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button onclick="submitDilutionData()" 
+                            class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                        Submit Data
+                    </button>
+                    <button onclick="addMoreData()" 
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                        Add More Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="calculationMenu" class="hidden mt-6">
+            <div class="space-y-4">
+                <button onclick="performCalculations()" 
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                    Calculate Dilution Analysis
+                </button>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="hidden mt-6">
+            <h2 class="text-xl mb-4">Dilution Analysis Results</h2>
+            <div id="tracerInfo" class="bg-gray-100 p-4 rounded mb-4"></div>
+            <div id="netSpikes" class="bg-gray-100 p-4 rounded mb-4"></div>
+            <div id="netDilutants" class="bg-gray-100 p-4 rounded mb-4"></div>
+            <div id="fdils" class="bg-gray-100 p-4 rounded mb-4"></div>
+            <div id="tracerDilutions" class="bg-gray-100 p-4 rounded mb-4"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedDataSource = '';
+        let selectedTracer = '';
+
+        async function loadTracers() {
+            try {
+                const response = await fetch('/get_tracers');
+                const tracers = await response.json();
+                const dropdown = document.getElementById('tracerDropdown');
+                dropdown.innerHTML = '';
+                tracers.forEach(tracer => {
+                    const option = document.createElement('option');
+                    option.value = tracer;
+                    option.textContent = tracer;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading tracers:', error);
+            }
+        }
+
+        function showTracerSelection(source) {
+            selectedDataSource = source;
+            document.getElementById('mainMenu').classList.add('hidden');
+            
+            if (source === 'test') {
+                // For test data, go directly to calculation menu
+                selectedTracer = 'Cs-134';
+                document.getElementById('calculationMenu').classList.remove('hidden');
+            } else {
+                // For custom data, show tracer selection
+                document.getElementById('tracerSelection').classList.remove('hidden');
+                loadTracers();
+            }
+        }
+
+        function proceedToDataEntry() {
+            selectedTracer = document.getElementById('tracerDropdown').value;
+            document.getElementById('tracerSelection').classList.add('hidden');
+            document.getElementById('dataEntry').classList.remove('hidden');
+        }
+
+        async function submitDilutionData() {
+            const dilutionNumber = document.getElementById('dilutionNumber').value;
+            const data = {
+                m0: {
+                    value: parseFloat(document.getElementById('m0Value').value),
+                    uncertainty: parseFloat(document.getElementById('m0Uncertainty').value)
+                },
+                m1: {
+                    value: parseFloat(document.getElementById('m1Value').value),
+                    uncertainty: parseFloat(document.getElementById('m1Uncertainty').value)
+                },
+                m2: {
+                    value: parseFloat(document.getElementById('m2Value').value),
+                    uncertainty: parseFloat(document.getElementById('m2Uncertainty').value)
+                }
+            };
+
+            try {
+                const response = await fetch(`/submit_dilution/${dilutionNumber}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                alert(result.message);
+                document.getElementById('dataEntry').classList.add('hidden');
+                document.getElementById('calculationMenu').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error submitting data:', error);
+                alert('Failed to submit dilution data');
+            }
+        }
+
+        function addMoreData() {
+            // Reset form and stay on data entry
+            document.getElementById('dilutionNumber').value = '';
+            document.getElementById('m0Value').value = '';
+            document.getElementById('m0Uncertainty').value = '';
+            document.getElementById('m1Value').value = '';
+            document.getElementById('m1Uncertainty').value = '';
+            document.getElementById('m2Value').value = '';
+            document.getElementById('m2Uncertainty').value = '';
+        }
+
+        async function performCalculations() {
+            document.getElementById('calculationMenu').classList.add('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+
+            try {
+                // Fetch tracer info
+                const tracerResponse = await fetch(`/get_tracer/${selectedTracer}`);
+                const tracerInfo = await tracerResponse.json();
+                document.getElementById('tracerInfo').innerHTML = 
+                    `<h3 class="font-bold">Tracer Information</h3>
+                     <p>Title: ${selectedTracer}</p>
+                     <p>Source ID: ${tracerInfo.source_id}</p>
+                     <p>Initial Activity: ${tracerInfo.activity} ± ${tracerInfo.uncertainty}</p>`;
+
+                // Fetch net spikes
+                const netSpikesResponse = await fetch('/calculate_net_spikes');
+                const netSpikes = await netSpikesResponse.json();
+                document.getElementById('netSpikes').innerHTML = 
+                    `<h3 class="font-bold">Net Spikes</h3>
+                     ${netSpikes.map(spike => 
+                        `<p>Dilution Step ${spike.dilution_step}: 
+                         ${spike.net_spike.value} ± ${spike.net_spike.uncertainty}</p>`
+                     ).join('')}`;
+
+                // Fetch net dilutants
+                const netDilutantsResponse = await fetch('/calculate_net_dilutants');
+                const netDilutants = await netDilutantsResponse.json();
+                document.getElementById('netDilutants').innerHTML = 
+                    `<h3 class="font-bold">Net Dilutants</h3>
+                     ${netDilutants.map(dilutant => 
+                        `<p>Dilution Step ${dilutant.dilution_step}: 
+                         ${dilutant.net_dilutant.value} ± ${dilutant.net_dilutant.uncertainty}</p>`
+                     ).join('')}`;
+
+                // Fetch dilution factors
+                const fdilsResponse = await fetch('/calculate_fdils');
+                const fdils = await fdilsResponse.json();
+                document.getElementById('fdils').innerHTML = 
+                    `<h3 class="font-bold">Dilution Factors</h3>
+                     ${fdils.map(fdil => 
+                        `<p>Dilution Step ${fdil.dilution_step}: 
+                         ${fdil.fdil.value} ± ${fdil.fdil.uncertainty}</p>`
+                     ).join('')}`;
+
+                // Fetch tracer dilutions
+                const tracerDilutionsResponse = await fetch(`/calculate_tracer_dilution/${selectedTracer}`);
+                const tracerDilutions = await tracerDilutionsResponse.json();
+                document.getElementById('tracerDilutions').innerHTML = 
+                    `<h3 class="font-bold">Tracer Dilutions</h3>
+                     ${tracerDilutions.map(dilution => 
+                        `<p>Dilution Step ${dilution.dilution_step}: 
+                         ${dilution.value} ± ${dilution.uncertainty}</p>`
+                     ).join('')}`;
+
+            } catch (error) {
+                console.error('Error performing calculations:', error);
+                alert('Failed to retrieve calculation results');
+            }
+        }
+    </script>
+</body>
+</html>

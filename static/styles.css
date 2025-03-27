@@ -1,0 +1,43 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f4f8;
+    color: #2c3e50;
+}
+
+.iaea-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+h1 {
+    color: #1a5f7a;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+button {
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+input, select {
+    border: 1px solid #e0e0e0;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    width: 100%;
+}
+
+.result-section {
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-top: 1rem;
+}

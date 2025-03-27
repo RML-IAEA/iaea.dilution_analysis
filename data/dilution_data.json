@@ -1,0 +1,17 @@
+{
+    "1": {
+        "m0": {"value": 41.8658, "uncertainty": 0.0092183},
+        "m1": {"value": 47.07585, "uncertainty": 0.0103645},
+        "m2": {"value": 94.721947, "uncertainty": 0.0208465}
+    },
+    "2": {
+        "m0": {"value": 51.2324, "uncertainty": 0.0112789},
+        "m1": {"value": 52.6587, "uncertainty": 0.0115927},
+        "m2": {"value": 53.2121, "uncertainty": 0.0117144}
+    },
+    "3": {
+        "m0": {"value": 15.2369, "uncertainty": 0.0033605},
+        "m1": {"value": 16.3115, "uncertainty": 0.0035968},
+        "m2": {"value": 20, "uncertainty": 0.0044081}
+    }
+}
