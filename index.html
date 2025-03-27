@@ -131,10 +131,25 @@
             }
         }
 
-        function showTracerSelection(source) {
+        async function showTracerSelection(source) {
             selectedDataSource = source;
             document.getElementById('mainMenu').classList.add('hidden');
             
+            // Set data source on the server
+            try {
+                await fetch('/set_data_source', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(source === 'test' ? 'default' : 'custom')
+                });
+            } catch (error) {
+                console.error('Error setting data source:', error);
+                alert('Failed to set data source');
+                return;
+            }
+
             if (source === 'test') {
                 // For test data, go directly to calculation menu
                 selectedTracer = 'Cs-134';

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi import HTTPException
 from services import DilutionService
 from models import DilutionData
 
@@ -7,11 +8,33 @@ router = APIRouter()
 service = DilutionService()
 
 
+@router.post("/reset_custom_data")
+async def reset_custom_data():
+    """
+    Reset the custom data file
+    """
+    service.reset_custom_data()
+    return {"message": "Custom data reset successfully"}
+
+
+@router.post("/set_data_source")
+async def set_data_source(source: str):
+    """
+    Set the data source for dilution calculations
+    :param source: 'default' or 'custom'
+    """
+    if source not in ['default', 'custom']:
+        raise HTTPException(status_code=400, detail="Invalid data source")
+    service.set_data_source(source)
+    return {"message": f"Data source set to {source}"}
+
+
 @router.post("/submit_dilution/{dilution_number}")
 async def submit_dilution(dilution_number: int, dilution_data: DilutionData):
-    service.store_dilution(dilution_number, dilution_data)
-    return {"message": f"Dilution {dilution_number} stored successfully"}
-
+    service.set_data_source('custom')
+    service.storage[dilution_number] = dilution_data
+    return {"message":
+            f"Dilution {dilution_number} data submitted successfully!"}
 
 @router.get("/get_tracer/{title}")
 async def get_tracer(title: str):

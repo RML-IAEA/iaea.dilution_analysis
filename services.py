@@ -1,13 +1,18 @@
 from math import sqrt
+import json
 from typing import Dict, List
 from fastapi import HTTPException
 
 from models import DilutionData
-from utils import read_json, calculate_unc
+from utils import calculate_unc
+from utils import ensure_file_exists
+from utils import load_json
+from utils import read_json
 
 
 # Configuration constants
 DEFAULT_FILE_PATH = "data/dilution_data.json"
+CUSTOM_FILE_PATH = "data/custom_dilution_data.json"
 TRACER_JSON_PATH = "data/tracer_info.json"
 
 
@@ -15,18 +20,25 @@ class DilutionService:
     """
     Service class to encapsulate dilution-related business logic
     """
-    def __init__(self, storage: Dict[int, DilutionData] = None):
-        self.storage = storage or {}
+    @classmethod
+    def get_data_source(cls) -> str:
+        """
+        Determine the current data source based on file contents
+        """
+        # Check if custom data file exists and has content
+        ensure_file_exists(CUSTOM_FILE_PATH)
+        custom_data = load_json(CUSTOM_FILE_PATH)
+        return 'custom' if custom_data else 'default'
 
     def get_data_by(self, dilution_number: int) -> Dict:
         """
-        Retrieve dilution data either from memory or default file
+        Retrieve dilution data based on the current data source
         """
-        if dilution_number in self.storage:
-            return self._convert_storage_to_dict(self.storage[dilution_number])
+        file_path = (CUSTOM_FILE_PATH if self.get_data_source() == 'custom'
+                     else DEFAULT_FILE_PATH)
 
         try:
-            data = read_json(DEFAULT_FILE_PATH)
+            data = read_json(file_path)
             dilution_data = data.get(str(dilution_number))
             if dilution_data is None:
                 raise HTTPException(status_code=404,
@@ -36,29 +48,40 @@ class DilutionService:
             raise HTTPException(status_code=404,
                                 detail="Data not found")
 
-    def _convert_storage_to_dict(self, dilution_data: DilutionData) -> Dict:
+    def submit_dilution_data(self, dilution_number: int, data: DilutionData):
         """
-        Convert Pydantic model to dictionary
+        Submit dilution data to the custom data file
         """
-        return {
-            "m0": {"value": dilution_data.m0.value,
-                   "uncertainty": dilution_data.m0.uncertainty},
-            "m1": {"value": dilution_data.m1.value,
-                   "uncertainty": dilution_data.m1.uncertainty},
-            "m2": {"value": dilution_data.m2.value,
-                   "uncertainty": dilution_data.m2.uncertainty}
+        ensure_file_exists(CUSTOM_FILE_PATH)
+
+        # Read existing data
+        custom_data = load_json(CUSTOM_FILE_PATH)
+
+        # Add or update the new dilution data
+        custom_data[str(dilution_number)] = {
+            "m0": {"value": data.m0.value, "uncertainty": data.m0.uncertainty},
+            "m1": {"value": data.m1.value, "uncertainty": data.m1.uncertainty},
+            "m2": {"value": data.m2.value, "uncertainty": data.m2.uncertainty}
         }
+        # Write back to file
+        with open(CUSTOM_FILE_PATH, 'w') as f:
+            json.dump(custom_data, f, indent=2)
 
     def get_dilutions(self) -> Dict:
         """
-        Retrieve all dilution data
+        Retrieve all dilution data based on the current data source
         """
-        if self.storage:
-            return {
-                str(k): self._convert_storage_to_dict(v)
-                for k, v in self.storage.items()
-            }
-        return read_json(DEFAULT_FILE_PATH)
+        file_path = (CUSTOM_FILE_PATH if self.get_data_source() == 'custom'
+                     else DEFAULT_FILE_PATH)
+        return read_json(file_path)
+
+    @staticmethod
+    def reset_custom_data():
+        """
+        Reset the custom data file to an empty state
+        """
+        with open(CUSTOM_FILE_PATH, 'w') as f:
+            json.dump({}, f)
 
     @staticmethod
     def get_tracers():
@@ -74,7 +97,7 @@ class DilutionService:
         """
         Given a tracer title, return its activity and uncertainty
         """
-        data = read_json(TRACER_JSON_PATH)
+        data = load_json(TRACER_JSON_PATH)
         for tracer in data:
             if tracer["title"].lower() == title.lower():
                 return {
@@ -89,7 +112,7 @@ class DilutionService:
         """
         Given a tracer title, return its activity and uncertainty
         """
-        data = read_json(TRACER_JSON_PATH)
+        data = load_json(TRACER_JSON_PATH)
         for tracer in data:
             if tracer["source_id"] == source_id:
                 return {
